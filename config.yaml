@@ -1,0 +1,75 @@
+# 算力不足时重点：1) 提高命中率 → 少用算力（开 L3、预计算、/tune_low_compute）
+# 2) 真要算时 token 加速（n_gpu_layers=-1、n_batch/n_threads 调优，见 model 段注释）
+engine:
+  version: "0.1.0"
+  name: "原生全精度大模型混合缓存加速引擎"
+
+model:
+  path: ""
+  allowed_precisions: ["f16", "bf16"]
+  n_ctx: 4096
+  n_batch: 512       # 推理时一次处理的 token 数，越大吞吐越高（占内存）；算力不足时保持 512 或 256
+  n_threads: 0       # 0 = 自动；算力不足时可用 /tune_low_compute 按电源状态优化
+  n_gpu_layers: -1   # -1 = 全上 GPU（Metal/CUDA），0 = 纯 CPU；有显卡务必 -1 否则 token 很慢
+  use_mmap: true
+  seed: -1
+  chat_template: ""   # auto-detect from model
+
+cache:
+  base_dir: "~/.cache/ai_engine"
+
+  # 三大缓存原则
+  instruction_only: true   # 不存整个会话，只认单次指令的完整内容
+  token_level: true       # 不存单次指令的整体，只存逐 token 计算过程 (KV/logits)
+  strict_exact: true      # 指令一字不差才命中；变一字则重新计算+存新缓存
+
+  # 缓存时机：每句话发完就存内存，会话结束只存硬盘
+  # 确保缓存即时生效，不依赖会话是否结束
+
+  # 前缀缓存：长对话前面不变则前面全复用（KV 级）
+  prefix_cache: true
+  prefix_cache_capacity_mb: 512
+
+  l1:
+    enabled: true
+    max_memory_mb: 100
+    eviction: "lru"
+
+  l2:
+    enabled: true
+    max_memory_mb: 200
+    eviction: "lfu"
+    top_k_logits: 100
+
+  l3:
+    enabled: true   # 开启后相似问题可命中缓存，减少算力（算力不足时建议开启）
+    max_disk_gb: 50
+    similarity_threshold: 0.98
+    eviction: "lru_freq"
+
+  l4:
+    enabled: true
+    max_disk_gb: 100
+    ttl_days: 90
+    eviction: "ttl_lru"
+
+resource_limits:
+  max_memory_mb: 2048
+  max_cpu_percent: 20
+  idle_cpu_percent: 3
+
+safety:
+  enabled: true
+  content_filter: true
+  privacy_encryption: false
+  encryption_key_file: ""
+
+logging:
+  level: "INFO"
+  dir: "~/.cache/ai_engine/logs"
+  max_days: 30
+  audit_max_days: 90
+
+monitoring:
+  enabled: true
+  stats_interval_seconds: 60
