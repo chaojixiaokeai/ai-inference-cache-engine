@@ -53,5 +53,9 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
+# GGUF model files (large binaries)
+*.gguf
+*.gguf.bin
+
 # Local config overrides (optional; keep config.yaml in repo)
 # config.local.yaml
