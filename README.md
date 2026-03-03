@@ -33,7 +33,7 @@ Native full-precision LLM hybrid cache acceleration engine. **Cache is the produ
 ## 安装
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ai-inference-cache-engine.git
+git clone https://github.com/pengjiajunwoaini-blip/ai-inference-cache-engine.git
 cd ai-inference-cache-engine
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
